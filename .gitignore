@@ -1,0 +1,23 @@
+# Environment secrets (critical: never commit actual secrets)
+.env
+*.env.local
+
+# Byte-compiled / optimized / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local SQLite databases (created dynamically at runtime)
+*.db
+fairshift.db
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
