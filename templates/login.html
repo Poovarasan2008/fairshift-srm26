@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+
+{% block title %}Login - FairShift Decent Work Platform{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 2rem auto;">
+  
+  <div class="card">
+    <div class="card-header" style="text-align: center; display: block;">
+      <h1 class="card-title" style="justify-content: center; font-size: 1.5rem;">
+        🔐 Sign In to FairShift
+      </h1>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+        Worker portal & employer oversight
+      </p>
+    </div>
+
+    <!-- Login Form -->
+    <form action="{{ url_for('login') }}" method="POST">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input 
+          type="text" 
+          id="username" 
+          name="username" 
+          required 
+          autocomplete="username"
+          placeholder="e.g. ramu or admin"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input 
+          type="password" 
+          id="password" 
+          name="password" 
+          required 
+          autocomplete="current-password"
+          placeholder="••••••••"
+        >
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-large" style="margin-top: 0.5rem;">
+        Sign In 🚀
+      </button>
+    </form>
+  </div>
+
+  <!-- Demo Accounts Fast-Fill Box for Hackathon Judges -->
+  <div class="card" style="background-color: #f1f5f9;">
+    <h2 style="font-size: 1rem; font-weight: 700; margin-bottom: 0.5rem; color: #1e293b;">
+      ⚡ Quick Demo Accounts (Click to Auto-Fill)
+    </h2>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+      Pre-loaded accounts covering multiple sectors & fatigue scenarios:
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+      <button type="button" class="btn btn-outline" style="background: white; justify-content: flex-start; text-align: left;" onclick="fillDemo('admin', 'admin123')">
+        👔 <strong>Manager / Supervisor:</strong>&nbsp;<code>admin</code> / <code>admin123</code> (All Sectors)
+      </button>
+
+      <button type="button" class="btn btn-outline" style="background: white; justify-content: flex-start; text-align: left;" onclick="fillDemo('ramu', 'worker123')">
+        🏗️ <strong>Construction Worker:</strong>&nbsp;<code>ramu</code> / <code>worker123</code> (Ramu Kumar)
+      </button>
+
+      <button type="button" class="btn btn-outline" style="background: white; justify-content: flex-start; text-align: left;" onclick="fillDemo('priya', 'worker123')">
+        🎓 <strong>College Campus Staff:</strong>&nbsp;<code>priya</code> / <code>worker123</code> (Priya Selvam)
+      </button>
+
+      <button type="button" class="btn btn-outline" style="background: white; justify-content: flex-start; text-align: left;" onclick="fillDemo('murugan', 'worker123')">
+        ⚠️ <strong>Fatigued Worker Demo:</strong>&nbsp;<code>murugan</code> / <code>worker123</code> (Murugan Velu)
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function fillDemo(user, pass) {
+    document.getElementById("username").value = user;
+    document.getElementById("password").value = pass;
+  }
+</script>
+{% endblock %}
+
