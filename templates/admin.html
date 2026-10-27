@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block title %}Employer Dashboard - FairShift{% endblock %}
+
+{% block content %}
+<!-- Top Admin Banner -->
+<div class="card" style="border-left: 6px solid #0f172a;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+    <div>
+      <h1 style="font-size: 1.5rem; font-weight: 800; color: #0f172a;">
+        👔 Employer & Safety Oversight Dashboard
+      </h1>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">
+        Real-time visibility into shift compliance, fair compensation, and workplace safety.
+      </p>
+    </div>
+    <span class="badge" style="background-color: #0f172a; color: white; padding: 0.5rem 0.75rem;">
+      Manager Role: {{ session.get('full_name') }}
+    </span>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- CROSS-SECTOR FILTER BAR (Construction vs College)                         -->
+<!-- ========================================================================= -->
+<div class="filter-bar">
+  <span style="font-weight: 700; align-self: center; font-size: 0.9rem; color: var(--text-muted); margin-right: 0.5rem;">
+    FILTER SECTOR:
+  </span>
+  <a href="{{ url_for('admin_dashboard', sector='All') }}" class="filter-pill {{ 'active' if selected_sector == 'All' else '' }}">
+    🌐 All Sectors
+  </a>
+  <a href="{{ url_for('admin_dashboard', sector='Construction Site') }}" class="filter-pill {{ 'active' if selected_sector == 'Construction Site' else '' }}">
+    🏗️ Construction Site
+  </a>
+  <a href="{{ url_for('admin_dashboard', sector='College') }}" class="filter-pill {{ 'active' if selected_sector == 'College' else '' }}">
+    🎓 College Campus
+  </a>
+</div>
+
+<!-- ========================================================================= -->
+<!-- TOP KPI METRICS CARDS                                                     -->
+<!-- ========================================================================= -->
+<div class="grid-4" style="margin-bottom: 1.25rem;">
+  <div class="stat-card">
+    <div class="stat-label">Active Workers</div>
+    <div class="stat-number">{{ workers|length }}</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Total Verified Hours</div>
+    <div class="stat-number" style="color: #0f766e;">{{ total_hours }}h</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Overtime Hours (1.5x)</div>
+    <div class="stat-number" style="color: #b45309;">{{ total_ot }}h</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-label">Open Safety Hazards</div>
+    <div class="stat-number" style="color: {{ '#b91c1c' if open_hazards_count > 0 else '#15803d' }};">
+      {{ open_hazards_count }}
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 4: Worker Fatigue & Burnout Alert Center                          -->
+<!-- ========================================================================= -->
+<div class="card" style="border-left: 6px solid #b91c1c;">
+  <div class="card-header">
+    <h2 class="card-title" style="color: #b91c1c;">
+      🚨 Worker Fatigue & Burnout Alerts
+    </h2>
+    <span class="badge badge-high">{{ fatigue_alerts|length }} Warning(s)</span>
+  </div>
+  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+    Automated risk engine flagging excessive single shifts (>10h), excessive weekly hours (>48h), or back-to-back shifts with less than 10h rest.
+  </p>
+
+  {% if fatigue_alerts %}
+    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+      {% for alert in fatigue_alerts %}
+        <div style="background-color: var(--danger-bg); border: 1.5px solid #fca5a5; border-radius: 8px; padding: 1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <strong style="color: #991b1b; font-size: 1rem;">
+              ⚠️ {{ alert['worker_name'] }} ({{ alert['sector'] }})
+            </strong>
+            <span class="badge" style="background-color: #991b1b; color: white;">
+              {{ alert['risk_level'] }}
+            </span>
+          </div>
+          <ul style="margin-left: 1.25rem; font-size: 0.85rem; color: #7f1d1d; margin-top: 0.25rem;">
+            {% for reason in alert['reasons'] %}
+              <li>{{ reason }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="background-color: var(--success-bg); color: var(--success); padding: 1rem; border-radius: 8px; text-align: center; font-weight: 600;">
+      ✅ No fatigue warnings detected. All monitored staff are within safe working limits!
+    </div>
+  {% endif %}
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 3: Workplace Safety Hazards Management (Status Lifecycle)         -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      ⚠️ Workplace Safety Hazards & Status Management
+    </h2>
+    <span class="badge" style="background-color: #f1f5f9; color: #334155;">Lifecycle: Reported ➔ In Review ➔ Fixed</span>
+  </div>
+
+  {% if hazards %}
+    <div style="display: flex; flex-direction: column; gap: 1rem;">
+      {% for h in hazards %}
+        <div style="border: 1.5px solid var(--border-color); border-radius: 8px; padding: 1rem; background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <div>
+              <span class="badge" style="background-color: #e2e8f0; color: #1e293b; margin-right: 0.35rem;">
+                {{ h['sector'] }}
+              </span>
+              <strong style="font-size: 1.1rem; color: #0f172a;">{{ h['title'] }}</strong>
+              <span style="font-size: 0.8rem; color: #64748b; margin-left: 0.5rem;">
+                (Ticket: <code>{{ h['ticket_id'] }}</code>)
+              </span>
+            </div>
+
+            <div>
+              {% if h['status'] == 'Reported' %}
+                <span class="badge badge-reported">Status: Reported</span>
+              {% elif h['status'] == 'In Review' %}
+                <span class="badge badge-inreview">Status: In Review</span>
+              {% elif h['status'] == 'Fixed' %}
+                <span class="badge badge-fixed">Status: Fixed</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <p style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.5rem;">
+            {{ h['description'] }}
+          </p>
+
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+            Category: <strong>{{ h['hazard_type'] }}</strong> | 
+            Severity: <strong style="color: {{ '#b91c1c' if h['severity'] == 'High' else '#b45309' }};">{{ h['severity'] }}</strong> | 
+            Reported by: <strong>{{ h['reporter_name'] if h['reporter_name'] else '🔒 Anonymous Worker' }}</strong>
+          </div>
+
+          <!-- Admin Status Update Form -->
+          <form action="{{ url_for('update_hazard') }}" method="POST" style="background-color: #f8fafc; border: 1px solid var(--border-color); border-radius: 6px; padding: 0.75rem;">
+            <input type="hidden" name="hazard_id" value="{{ h['id'] }}">
+            
+            <div class="grid-2" style="align-items: center;">
+              <div>
+                <label for="status-{{ h['id'] }}" style="font-size: 0.8rem;">Update Status</label>
+                <select id="status-{{ h['id'] }}" name="status" style="min-height: 40px; font-size: 0.9rem;">
+                  <option value="Reported" {{ 'selected' if h['status'] == 'Reported' else '' }}>Reported</option>
+                  <option value="In Review" {{ 'selected' if h['status'] == 'In Review' else '' }}>In Review (Investigating)</option>
+                  <option value="Fixed" {{ 'selected' if h['status'] == 'Fixed' else '' }}>Fixed (Hazard Resolved)</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="notes-{{ h['id'] }}" style="font-size: 0.8rem;">Resolution Action Notes</label>
+                <input 
+                  type="text" 
+                  id="notes-{{ h['id'] }}" 
+                  name="admin_notes" 
+                  value="{{ h['admin_notes'] }}" 
+                  placeholder="e.g. Scaffolding repaired by maintenance crew"
+                  style="min-height: 40px; font-size: 0.9rem;"
+                >
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 0.5rem; min-height: 38px; padding: 0.4rem 1rem; font-size: 0.85rem;">
+              Update Hazard Status 💾
+            </button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;">
+      No safety hazards logged for this sector.
+    </p>
+  {% endif %}
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 5: Anonymous Workforce Sentiment Summary                          -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      🔒 Anonymous Workforce Feedback & Voice
+    </h2>
+    <span class="badge" style="background-color: #f1f5f9; color: #475569;">{{ feedbacks|length }} Submission(s)</span>
+  </div>
+
+  {% if feedbacks %}
+    <div class="grid-2">
+      {% for fb in feedbacks %}
+        <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; background: #ffffff;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+            <span class="badge" style="background-color: #e0f2fe; color: #0369a1;">
+              {{ fb['sector'] }} • {{ fb['category'] }}
+            </span>
+            <span style="font-size: 0.9rem;">
+              {% for _ in range(fb['rating']) %}⭐{% endfor %}
+            </span>
+          </div>
+          <p style="font-size: 0.9rem; color: var(--text-main); font-style: italic; margin-top: 0.25rem;">
+            "{{ fb['comments'] }}"
+          </p>
+          <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 0.5rem;">
+            Recorded anonymously on {{ fb['created_at'][:10] }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 1.5rem 0;">
+      No feedback recorded for this sector yet.
+    </p>
+  {% endif %}
+</div>
+
+<!-- ========================================================================= -->
+<!-- Workers List & Sector Roster                                              -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      👥 Workforce Sector Roster
+    </h2>
+  </div>
+
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Worker Name</th>
+          <th>Sector</th>
+          <th>Username</th>
+          <th>Standard Base Rate</th>
+          <th>Overtime Rate (1.5x)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for w in workers %}
+          <tr>
+            <td><strong>{{ w['full_name'] }}</strong></td>
+            <td>
+              <span class="badge" style="background-color: #f1f5f9; color: #334155;">{{ w['sector'] }}</span>
+            </td>
+            <td><code>{{ w['username'] }}</code></td>
+            <td>₹{{ w['hourly_rate'] }}/h</td>
+            <td style="color: var(--warning); font-weight: 700;">₹{{ (w['hourly_rate'] * 1.5)|round(1) }}/h</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
