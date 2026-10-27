@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Worker Portal - FairShift{% endblock %}
+
+{% block content %}
+<!-- Top Worker Header Card -->
+<div class="card" style="border-left: 6px solid var(--primary);">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+    <div>
+      <span class="badge" style="background-color: #e0f2fe; color: #0369a1; margin-bottom: 0.25rem;">
+        🏢 {{ session.get('sector') }}
+      </span>
+      <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--text-main);">
+        {{ session.get('full_name') }}
+      </h1>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">
+        Standard Rate: <strong>₹{{ session.get('hourly_rate', 120) }}/hour</strong> | Overtime Rate: <strong>₹{{ (session.get('hourly_rate', 120) * 1.5)|round(1) }}/hour</strong>
+      </p>
+    </div>
+
+    <!-- Live Digital Clock -->
+    <div style="text-align: right; background: #f8fafc; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border-color);">
+      <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">CURRENT TIME</div>
+      <div id="live-clock" style="font-size: 1.25rem; font-weight: 800; color: #0284c7;">--:--:--</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 1: Shift Check-in / Check-out with Automatic Overtime Tracking   -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      <span>⏱️</span> <span data-i18n="worker_portal">Shift Clock</span>
+    </h2>
+    <div>
+      {% if active_shift %}
+        <span class="badge" style="background-color: var(--success-bg); color: var(--success);" data-i18n="on_duty">
+          🟢 On Duty (Active Shift)
+        </span>
+      {% else %}
+        <span class="badge" style="background-color: #f1f5f9; color: #475569;" data-i18n="off_duty">
+          ⚪ Off Duty
+        </span>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="padding: 0.5rem 0;">
+    {% if active_shift %}
+      <div style="background-color: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; text-align: center;">
+        <p style="font-size: 1rem; color: #166534; font-weight: 600;">
+          Clocked in at: <strong>{{ active_shift['check_in'].replace('T', ' ')[:19] }}</strong>
+        </p>
+        <p style="font-size: 0.85rem; color: #15803d; margin-top: 0.25rem;">
+          Any shift time over 8.0 hours will automatically compute as 1.5x overtime.
+        </p>
+      </div>
+
+      <form action="{{ url_for('clock_out') }}" method="POST">
+        <button type="submit" class="btn btn-danger btn-large" data-i18n="clock_out_btn">
+          ⏹️ Clock Out (Finish Shift)
+        </button>
+      </form>
+    {% else %}
+      <form action="{{ url_for('clock_in') }}" method="POST">
+        <button type="submit" class="btn btn-success btn-large" data-i18n="clock_in_btn">
+          ▶️ Clock In (Start Shift)
+        </button>
+      </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 2: Transparent Payslip Breakdown (Big Numbers, Clear Math)        -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      <span data-i18n="payslip_title">💰 Transparent Payslip</span>
+    </h2>
+    <span class="badge" style="background-color: #e0f2fe; color: #0284c7;">UN SDG 8 Fair Pay</span>
+  </div>
+
+  <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;" data-i18n="payslip_desc">
+    Overtime starts automatically after 8 hours at 1.5x pay. Zero hidden deductions.
+  </p>
+
+  <!-- Big Number Visual Card -->
+  <div class="payslip-summary">
+    <div style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;" data-i18n="total_earned">
+      Total Take-Home Pay
+    </div>
+    <div class="payslip-total">
+      ₹{{ payslip['total_pay'] }}
+    </div>
+    <div style="font-size: 0.85rem; opacity: 0.85;">
+      Based on {{ payslip['total_hours'] }} total verified hours
+    </div>
+
+    <div class="payslip-breakdown">
+      <div>
+        <div style="font-size: 0.8rem; opacity: 0.8;" data-i18n="base_pay">Base Pay</div>
+        <div style="font-size: 1.15rem; font-weight: 700;">₹{{ payslip['base_pay'] }}</div>
+        <div style="font-size: 0.75rem; opacity: 0.8;">({{ payslip['regular_hours'] }} hrs @ ₹{{ payslip['hourly_rate'] }})</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 0.8rem; color: #fdba74;" data-i18n="overtime_pay">Overtime Pay (1.5x)</div>
+        <div style="font-size: 1.15rem; font-weight: 700; color: #fdba74;">+ ₹{{ payslip['overtime_pay'] }}</div>
+        <div style="font-size: 0.75rem; opacity: 0.8;">({{ payslip['overtime_hours'] }} hrs @ ₹{{ payslip['overtime_rate'] }})</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 3: Voice & Text Safety Hazard Reporting (With Status Tracking)   -->
+<!-- ========================================================================= -->
+<div class="grid-2">
+  
+  <!-- Report Form -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span data-i18n="hazard_title">⚠️ Report a Safety Hazard</span>
+      </h2>
+    </div>
+    <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.75rem;" data-i18n="hazard_help">
+      Speak or type any safety risk. Track it until it's fixed.
+    </p>
+
+    <!-- Browser Web Speech API Button -->
+    <div style="margin-bottom: 1rem;">
+      <button type="button" id="voice-input-btn" class="btn btn-outline" style="width: 100%; border-color: #0284c7; color: #0284c7; font-weight: 700;">
+        🎙️ Tap to Speak (Voice Input)
+      </button>
+      <span style="display: block; font-size: 0.75rem; color: var(--text-muted); text-align: center; margin-top: 0.25rem;">
+        Speaks in selected language (English or தமிழ்)
+      </span>
+    </div>
+
+    <form action="{{ url_for('report_hazard') }}" method="POST">
+      <div class="form-group">
+        <label for="hazard-title">Hazard Title</label>
+        <input 
+          type="text" 
+          id="hazard-title" 
+          name="title" 
+          required 
+          placeholder="e.g. Broken scaffolding or Wet corridor"
+        >
+      </div>
+
+      <div class="form-group">
+        <label for="hazard-desc">Details & Description</label>
+        <textarea 
+          id="hazard-desc" 
+          name="description" 
+          required 
+          placeholder="Describe where it is and why it is dangerous..."
+        ></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="hazard-type">Category</label>
+        <select id="hazard-type" name="hazard_type">
+          <option value="Slip/Trip">Slip / Trip / Fall Hazard</option>
+          <option value="Scaffolding">Scaffolding / Working at Height</option>
+          <option value="Electrical">Exposed Electrical Wiring</option>
+          <option value="Equipment">Damaged Tools or Machinery</option>
+          <option value="Sanitation">Sanitation & Toxic Fumes</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="hazard-severity">Severity Level</label>
+        <select id="hazard-severity" name="severity">
+          <option value="Medium">Medium (Attention needed)</option>
+          <option value="High">High (Immediate Danger)</option>
+          <option value="Low">Low (Minor observation)</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem;">
+        <input type="checkbox" id="anon-check" name="is_anonymous" value="true" style="width: 20px; height: 20px;">
+        <label for="anon-check" style="margin-bottom: 0; font-weight: normal; font-size: 0.9rem;">
+          Report anonymously (Do not show my name to supervisor)
+        </label>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" data-i18n="submit_btn">
+        Submit Hazard Report 🚨
+      </button>
+    </form>
+  </div>
+
+  <!-- Status Tracking for Reported Hazards -->
+  <div class="card">
+    <div class="card-header">
+      <h2 class="card-title">
+        <span data-i18n="track_title">📋 My Safety Reports & Status</span>
+      </h2>
+    </div>
+
+    {% if my_hazards %}
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        {% for h in my_hazards %}
+          <div style="border: 1px solid var(--border-color); border-radius: 8px; padding: 0.85rem; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.35rem;">
+              <span style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">
+                {{ h['title'] }}
+              </span>
+              {% if h['status'] == 'Reported' %}
+                <span class="badge badge-reported">Reported</span>
+              {% elif h['status'] == 'In Review' %}
+                <span class="badge badge-inreview">In Review</span>
+              {% elif h['status'] == 'Fixed' %}
+                <span class="badge badge-fixed">Fixed</span>
+              {% endif %}
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              {{ h['description'] }}
+            </p>
+
+            <div style="font-size: 0.75rem; color: #64748b; display: flex; justify-content: space-between;">
+              <span>Ticket: <code>{{ h['ticket_id'] }}</code></span>
+              <span>Severity: <strong>{{ h['severity'] }}</strong></span>
+            </div>
+
+            {% if h['admin_notes'] %}
+              <div style="margin-top: 0.5rem; background-color: #f8fafc; border-left: 3px solid #0284c7; padding: 0.4rem 0.6rem; font-size: 0.8rem; color: #0369a1;">
+                <strong>Supervisor Action:</strong> {{ h['admin_notes'] }}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p style="color: var(--text-muted); text-align: center; padding: 2rem 0;" data-i18n="no_hazards">
+        No hazards reported yet. Stay safe!
+      </p>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- ========================================================================= -->
+<!-- FEATURE 5: 100% Anonymous Feedback Box                                    -->
+<!-- ========================================================================= -->
+<div class="card" style="border-top: 4px solid var(--secondary);">
+  <div class="card-header">
+    <h2 class="card-title">
+      <span data-i18n="feedback_title">🔒 Anonymous Feedback</span>
+    </h2>
+    <span class="badge" style="background-color: #f1f5f9; color: #475569;">Zero Identity Recorded</span>
+  </div>
+  <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;" data-i18n="feedback_desc">
+    Your identity is never stored. Speak freely to management about equipment, supervisors, or facilities.
+  </p>
+
+  <form action="{{ url_for('submit_feedback') }}" method="POST">
+    <div class="grid-2">
+      <div class="form-group">
+        <label for="fb-category">Category</label>
+        <select id="fb-category" name="category">
+          <option value="Safety Gear">Safety Gear & PPE</option>
+          <option value="Workplace Culture">Facilities & Cleanliness</option>
+          <option value="Manager Behavior">Fair Treatment by Supervisors</option>
+          <option value="Timely Pay">Pay Accuracy & Questions</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="fb-rating">Workplace Satisfaction (1 to 5 Stars)</label>
+        <select id="fb-rating" name="rating">
+          <option value="5">⭐⭐⭐⭐⭐ Excellent (5)</option>
+          <option value="4">⭐⭐⭐⭐ Good (4)</option>
+          <option value="3" selected>⭐⭐⭐ Fair (3)</option>
+          <option value="2">⭐⭐ Poor (2)</option>
+          <option value="1">⭐ Unacceptable (1)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="fb-comments">Comments / Suggestions</label>
+      <textarea 
+        id="fb-comments" 
+        name="comments" 
+        required 
+        placeholder="Share what needs improvement without fear of retribution..."
+      ></textarea>
+    </div>
+
+    <button type="submit" class="btn btn-secondary" style="width: 100%;">
+      Submit Anonymous Feedback 🕊️
+    </button>
+  </form>
+</div>
+
+<!-- ========================================================================= -->
+<!-- Shift History Table                                                      -->
+<!-- ========================================================================= -->
+<div class="card">
+  <div class="card-header">
+    <h2 class="card-title">
+      <span data-i18n="recent_shifts">📅 Recent Shifts & Overtime</span>
+    </h2>
+  </div>
+
+  {% if past_shifts %}
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Check In</th>
+            <th>Check Out</th>
+            <th>Regular (h)</th>
+            <th>Overtime (h)</th>
+            <th>Total Hours</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in past_shifts %}
+            <tr>
+              <td>{{ s['check_in'][:10] }}</td>
+              <td>{{ s['check_in'][11:16] }}</td>
+              <td>{{ s['check_out'][11:16] if s['check_out'] else '--:--' }}</td>
+              <td>{{ s['regular_hours'] }}h</td>
+              <td>
+                {% if s['overtime_hours'] > 0 %}
+                  <span style="color: var(--warning); font-weight: 700;">+{{ s['overtime_hours'] }}h OT</span>
+                {% else %}
+                  0h
+                {% endif %}
+              </td>
+              <td><strong>{{ s['total_hours'] }}h</strong></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <p style="color: var(--text-muted); text-align: center; padding: 1.5rem 0;">
+      No completed shifts yet. Click "Clock In" to begin!
+    </p>
+  {% endif %}
+</div>
+{% endblock %}
+
